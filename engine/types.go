@@ -4,34 +4,36 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/XXueTu/graph_task/types"
 )
 
-// TaskStatus 任务状态
-type TaskStatus int
+// Type aliases for compatibility
+type TaskStatus = types.TaskStatus
+type WorkflowStatus = types.WorkflowStatus
+type TaskHandler = types.TaskHandler
+type ExecutionResult = types.ExecutionResult
+type TaskExecutionResult = types.TaskExecutionResult
 
+// Constants for task status
 const (
-	TaskStatusPending TaskStatus = iota
-	TaskStatusRunning
-	TaskStatusSuccess
-	TaskStatusFailed
-	TaskStatusSkipped
-	TaskStatusCanceled
+	TaskStatusPending   = types.TaskStatusPending
+	TaskStatusRunning   = types.TaskStatusRunning
+	TaskStatusSuccess   = types.TaskStatusSuccess
+	TaskStatusFailed    = types.TaskStatusFailed
+	TaskStatusSkipped   = types.TaskStatusSkipped
+	TaskStatusCanceled  = types.TaskStatusCanceled
 )
 
-// WorkflowStatus 工作流状态
-type WorkflowStatus int
-
+// Constants for workflow status
 const (
-	WorkflowStatusDraft WorkflowStatus = iota
-	WorkflowStatusPublished
-	WorkflowStatusRunning
-	WorkflowStatusSuccess
-	WorkflowStatusFailed
-	WorkflowStatusCanceled
+	WorkflowStatusDraft     = types.WorkflowStatusDraft
+	WorkflowStatusPublished = types.WorkflowStatusPublished
+	WorkflowStatusRunning   = types.WorkflowStatusRunning
+	WorkflowStatusSuccess   = types.WorkflowStatusSuccess
+	WorkflowStatusFailed    = types.WorkflowStatusFailed
+	WorkflowStatusCanceled  = types.WorkflowStatusCanceled
 )
-
-// TaskHandler 任务处理函数
-type TaskHandler func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error)
 
 // Task 任务定义
 type Task struct {
@@ -77,35 +79,6 @@ type ExecutionPlan struct {
 	CreatedAt      time.Time           `json:"created_at"`
 }
 
-// ExecutionResult 执行结果
-type ExecutionResult struct {
-	ExecutionID string                          `json:"execution_id"`
-	WorkflowID  string                          `json:"workflow_id"`
-	Status      WorkflowStatus                  `json:"status"`
-	TaskResults map[string]*TaskExecutionResult `json:"task_results"`
-	Input       map[string]interface{}          `json:"input"`
-	Output      map[string]interface{}          `json:"output"`
-	Error       string                          `json:"error,omitempty"`
-	StartTime   time.Time                       `json:"start_time"`
-	EndTime     time.Time                       `json:"end_time"`
-	Duration    time.Duration                   `json:"duration"`
-	RetryCount  int                             `json:"retry_count"`
-	CreatedAt   time.Time                       `json:"created_at"`
-	UpdatedAt   time.Time                       `json:"updated_at"`
-}
-
-// TaskExecutionResult 任务执行结果
-type TaskExecutionResult struct {
-	TaskID     string                 `json:"task_id"`
-	Status     TaskStatus             `json:"status"`
-	Input      map[string]interface{} `json:"input"`
-	Output     map[string]interface{} `json:"output"`
-	Error      string                 `json:"error,omitempty"`
-	StartTime  time.Time              `json:"start_time"`
-	EndTime    time.Time              `json:"end_time"`
-	Duration   time.Duration          `json:"duration"`
-	RetryCount int                    `json:"retry_count"`
-}
 
 // ExecutionContext 执行上下文
 type ExecutionContext struct {

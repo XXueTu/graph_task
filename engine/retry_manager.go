@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/XXueTu/graph_task/types"
 )
 
 // RetryManager 重试管理器
@@ -21,38 +23,18 @@ type RetryConfig struct {
 	MaxRetryDelay     time.Duration // 最大重试延迟
 }
 
-// RetryInfo 重试信息
-type RetryInfo struct {
-	ExecutionID   string               `json:"execution_id"`
-	WorkflowID    string               `json:"workflow_id"`
-	Input         map[string]any       `json:"input"`
-	FailureReason string               `json:"failure_reason"`
-	FailedAt      time.Time            `json:"failed_at"`
-	RetryCount    int                  `json:"retry_count"`
-	LastRetryAt   *time.Time           `json:"last_retry_at,omitempty"`
-	Status        RetryStatus          `json:"status"`
-	ManualRetries []*ManualRetryRecord `json:"manual_retries"`
-}
+// Type aliases
+type RetryInfo = types.RetryInfo
+type ManualRetryRecord = types.ManualRetryRecord
 
-// RetryStatus 重试状态
-type RetryStatus string
-
+// Constants for retry status
 const (
-	RetryStatusPending   RetryStatus = "pending"   // 待重试
-	RetryStatusRetrying  RetryStatus = "retrying"  // 重试中
-	RetryStatusExhausted RetryStatus = "exhausted" // 自动重试已耗尽
-	RetryStatusAbandoned RetryStatus = "abandoned" // 已放弃
-	RetryStatusRecovered RetryStatus = "recovered" // 已恢复
+	RetryStatusPending   = "pending"   // 待重试
+	RetryStatusRetrying  = "retrying"  // 重试中
+	RetryStatusExhausted = "exhausted" // 自动重试已耗尽
+	RetryStatusAbandoned = "abandoned" // 已放弃
+	RetryStatusRecovered = "recovered" // 已恢复
 )
-
-// ManualRetryRecord 手动重试记录
-type ManualRetryRecord struct {
-	AttemptID    string    `json:"attempt_id"`
-	RetryAt      time.Time `json:"retry_at"`
-	Success      bool      `json:"success"`
-	ErrorMessage string    `json:"error_message,omitempty"`
-	ExecutionID  string    `json:"execution_id,omitempty"` // 新的执行ID
-}
 
 // RetryStorage 重试存储接口
 type RetryStorage interface {
@@ -90,7 +72,7 @@ func (rm *RetryManager) RecordFailedExecution(executionID, workflowID string, in
 		FailedAt:      time.Now(),
 		RetryCount:    rm.config.MaxAutoRetries,
 		Status:        RetryStatusExhausted,
-		ManualRetries: make([]*ManualRetryRecord, 0),
+		ManualRetries: make([]ManualRetryRecord, 0),
 	}
 
 	rm.failedExecs[executionID] = retryInfo
@@ -150,7 +132,7 @@ func (rm *RetryManager) RecordManualRetry(originalExecutionID, newExecutionID st
 		return fmt.Errorf("retry info not found for execution: %s", originalExecutionID)
 	}
 
-	record := &ManualRetryRecord{
+	record := ManualRetryRecord{
 		AttemptID:    generateRetryAttemptID(),
 		RetryAt:      time.Now(),
 		Success:      success,

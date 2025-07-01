@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/XXueTu/graph_task/event"
+	"github.com/XXueTu/graph_task/types"
 )
 
 // Engine 核心引擎接口
@@ -19,18 +20,18 @@ type Engine interface {
 	Subscribe(eventType string, handler event.EventHandler) error
 
 	// 执行管理
-	Execute(ctx context.Context, workflowID string, input map[string]interface{}) (*ExecutionResult, error)
+	Execute(ctx context.Context, workflowID string, input map[string]interface{}) (*types.ExecutionResult, error)
 	ExecuteAsync(ctx context.Context, workflowID string, input map[string]interface{}) (string, error)
-	GetExecutionResult(executionID string) (*ExecutionResult, error)
+	GetExecutionResult(executionID string) (*types.ExecutionResult, error)
 	CancelExecution(executionID string) error
 
 	// 重试管理
-	ManualRetry(ctx context.Context, executionID string) (*ExecutionResult, error)
-	GetFailedExecutions() ([]*RetryInfo, error)
+	ManualRetry(ctx context.Context, executionID string) (*types.ExecutionResult, error)
+	GetFailedExecutions() ([]*types.RetryInfo, error)
 	GetRetryStatistics() *RetryStatistics
 	AbandonRetry(executionID string) error
 
-	GetRunningExecutions() ([]*ExecutionResult, error)
+	GetRunningExecutions() ([]*types.ExecutionResult, error)
 
 	// 执行追踪
 	Close() error
@@ -41,7 +42,7 @@ type WorkflowBuilder interface {
 	SetName(name string) WorkflowBuilder
 	SetDescription(description string) WorkflowBuilder
 	SetVersion(version string) WorkflowBuilder
-	AddTask(taskID, name string, handler TaskHandler) WorkflowBuilder
+	AddTask(taskID, name string, handler types.TaskHandler) WorkflowBuilder
 	AddDependency(fromTask, toTask string) WorkflowBuilder
 	SetTaskTimeout(taskID string, timeout int) WorkflowBuilder
 	SetTaskRetry(taskID string, retry int) WorkflowBuilder
@@ -52,14 +53,14 @@ type WorkflowBuilder interface {
 // Storage 存储接口
 type Storage interface {
 	// 执行记录存储
-	SaveExecution(result *ExecutionResult) error
-	GetExecution(executionID string) (*ExecutionResult, error)
-	UpdateExecution(result *ExecutionResult) error
-	ListExecutions(workflowID string, offset, limit int) ([]*ExecutionResult, error)
+	SaveExecution(result *types.ExecutionResult) error
+	GetExecution(executionID string) (*types.ExecutionResult, error)
+	UpdateExecution(result *types.ExecutionResult) error
+	ListExecutions(workflowID string, offset, limit int) ([]*types.ExecutionResult, error)
 	// 任务执行记录
-	SaveTaskExecution(executionID string, result *TaskExecutionResult) error
-	GetTaskExecution(executionID, taskID string) (*TaskExecutionResult, error)
-	ListTaskExecutions(executionID string) ([]*TaskExecutionResult, error)
+	SaveTaskExecution(executionID string, result *types.TaskExecutionResult) error
+	GetTaskExecution(executionID, taskID string) (*types.TaskExecutionResult, error)
+	ListTaskExecutions(executionID string) ([]*types.TaskExecutionResult, error)
 }
 
 // Cache 缓存接口
@@ -80,6 +81,6 @@ type PlanBuilder interface {
 
 // Executor 执行器接口
 type Executor interface {
-	Execute(ctx context.Context, plan *ExecutionPlan, workflow *Workflow, input map[string]any, contextManager *LocalContextManager) (*ExecutionResult, error)
-	ExecuteTask(ctx context.Context, task *Task, execCtx *ExecutionContext) (*TaskExecutionResult, error)
+	Execute(ctx context.Context, plan *ExecutionPlan, workflow *Workflow, input map[string]any, contextManager *LocalContextManager) (*types.ExecutionResult, error)
+	ExecuteTask(ctx context.Context, task *Task, execCtx *ExecutionContext) (*types.TaskExecutionResult, error)
 }

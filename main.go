@@ -7,17 +7,18 @@ import (
 	"time"
 
 	"github.com/XXueTu/graph_task/domain/workflow"
+	"github.com/XXueTu/graph_task/engine"
 )
 
 func main() {
 	fmt.Println("🚀 启动全新分层架构任务编排引擎")
 
 	// 创建引擎配置
-	config := DefaultEngineConfig()
+	config := engine.DefaultEngineConfig()
 	config.MySQLDSN = "root:Root@123@tcp(10.99.51.9:3306)/graph_task?charset=utf8mb4&parseTime=True&loc=Local"
 
 	// 创建引擎
-	engine, err := NewEngine(config)
+	engine, err := engine.NewEngine(config)
 	if err != nil {
 		log.Fatalf("❌ 创建引擎失败: %v", err)
 	}
@@ -33,7 +34,7 @@ func main() {
 	fmt.Println("🎉 新架构演示完成！")
 }
 
-func demonstrateBasicFeatures(engine Engine) error {
+func demonstrateBasicFeatures(engine engine.Engine) error {
 	ctx := context.Background()
 
 	// 1. 创建和发布工作流

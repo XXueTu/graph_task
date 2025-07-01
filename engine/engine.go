@@ -1,5 +1,4 @@
-// Package main 提供全新的分层架构任务编排引擎
-package main
+package engine
 
 import (
 	"context"
@@ -46,6 +45,11 @@ type Engine interface {
 
 	// 事件订阅
 	Subscribe(eventType string, handler application.EventHandler) error
+
+	// 获取应用服务
+	GetWorkflowService() *application.WorkflowService
+	GetExecutionService() *application.ExecutionService
+	GetRetryService() *application.RetryService
 
 	// 生命周期管理
 	Close() error
@@ -276,6 +280,19 @@ func (e *engine) AbandonRetry(executionID string) error {
 // 事件订阅方法实现
 func (e *engine) Subscribe(eventType string, handler application.EventHandler) error {
 	return e.eventBus.Subscribe(eventType, handler)
+}
+
+// 获取应用服务
+func (e *engine) GetWorkflowService() *application.WorkflowService {
+	return e.workflowService
+}
+
+func (e *engine) GetExecutionService() *application.ExecutionService {
+	return e.executionService
+}
+
+func (e *engine) GetRetryService() *application.RetryService {
+	return e.retryService
 }
 
 // 生命周期管理

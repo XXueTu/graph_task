@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Graph - 任务编排引擎管理界面</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .active-tab {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .status-running { color: #f59e0b; }
+        .status-success { color: #10b981; }
+        .status-failed { color: #ef4444; }
+        .status-pending { color: #6b7280; }
+        .log-debug { color: #6b7280; }
+        .log-info { color: #3b82f6; }
+        .log-warn { color: #f59e0b; }
+        .log-error { color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- 导航栏 -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">
+                <i class="fas fa-project-diagram mr-2"></i>
+                Task Graph 管理界面
+            </h1>
+            <div class="flex items-center space-x-4">
+                <span id="health-status" class="px-3 py-1 rounded-full text-sm bg-green-500">
+                    <i class="fas fa-heart mr-1"></i>健康
+                </span>
+                <button onclick="refreshData()" class="px-3 py-1 bg-blue-500 rounded hover:bg-blue-400">
+                    <i class="fas fa-sync-alt mr-1"></i>刷新
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <div class="container mx-auto p-6">
+        <!-- 标签页导航 -->
+        <div class="mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8">
+                    <button onclick="showTab('workflows')" id="workflows-tab" 
+                            class="tab-button py-2 px-1 border-b-2 font-medium text-sm active-tab">
+                        <i class="fas fa-sitemap mr-2"></i>工作流管理
+                    </button>
+                    <button onclick="showTab('executions')" id="executions-tab" 
+                            class="tab-button py-2 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-play-circle mr-2"></i>执行监控
+                    </button>
+                    <button onclick="showTab('retries')" id="retries-tab" 
+                            class="tab-button py-2 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-redo mr-2"></i>重试管理
+                    </button>
+                    <button onclick="showTab('sdk')" id="sdk-tab" 
+                            class="tab-button py-2 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-code mr-2"></i>SDK集成
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 工作流管理页面 -->
+        <div id="workflows-content" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800">工作流列表</h2>
+                    <button onclick="showCreateWorkflowModal()" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <i class="fas fa-plus mr-2"></i>创建工作流模板
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">版本</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">任务数</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workflows-list" class="bg-white divide-y divide-gray-200">
+                            <!-- 工作流列表将通过JavaScript填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 执行监控页面 -->
+        <div id="executions-content" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800">执行监控</h2>
+                    <div class="flex space-x-4">
+                        <select id="workflow-filter" class="px-3 py-2 border border-gray-300 rounded">
+                            <option value="">所有工作流</option>
+                        </select>
+                        <button onclick="showExecuteModal()" 
+                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                            <i class="fas fa-play mr-2"></i>执行工作流
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">执行ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">工作流</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">进度</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">开始时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">耗时</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">重试次数</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="executions-list" class="bg-white divide-y divide-gray-200">
+                            <!-- 执行列表将通过JavaScript填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 重试管理页面 -->
+        <div id="retries-content" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800">重试管理</h2>
+                    <button onclick="refreshRetries()" 
+                            class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
+                        <i class="fas fa-sync-alt mr-2"></i>刷新重试状态
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">执行ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">工作流ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">失败原因</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">重试次数</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后重试时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="retries-list" class="bg-white divide-y divide-gray-200">
+                            <!-- 重试列表将通过JavaScript填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SDK集成页面 -->
+        <div id="sdk-content" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">SDK集成指南</h2>
+                
+                <div class="space-y-6">
+                    <!-- 快速开始 -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-3">
+                            <i class="fas fa-rocket mr-2 text-blue-600"></i>快速开始
+                        </h3>
+                        <div class="bg-gray-100 rounded p-4">
+                            <pre class="text-sm"><code>go get github.com/XXueTu/graph_task
+
+import "github.com/XXueTu/graph_task"
+
+// 创建客户端
+client := task_graph.NewClient("http://localhost:8080")
+
+// 注册工作流
+builder := client.CreateWorkflow("my-workflow")
+builder.AddTask("task1", "Process Data", myTaskHandler)
+workflow, _ := builder.Build()
+client.RegisterWorkflow(workflow)
+
+// 执行工作流
+result, _ := client.Execute("my-workflow", map[string]interface{}{
+    "input": "data",
+})</code></pre>
+                        </div>
+                    </div>
+                    
+                    <!-- 详细示例 -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-3">
+                            <i class="fas fa-code mr-2 text-green-600"></i>详细示例
+                        </h3>
+                        <div class="bg-gray-100 rounded p-4 max-h-64 overflow-y-auto">
+                            <pre class="text-sm" id="sdk-example-code">
+// 详细的SDK使用示例将在这里显示
+                            </pre>
+                        </div>
+                    </div>
+                    
+                    <!-- 配置选项 -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-3">
+                            <i class="fas fa-cog mr-2 text-purple-600"></i>配置选项
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 rounded p-3">
+                                <h4 class="font-medium mb-2">基本配置</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 服务器地址配置</li>
+                                    <li>• 超时时间设置</li>
+                                    <li>• 重试策略配置</li>
+                                    <li>• 并发控制参数</li>
+                                </ul>
+                            </div>
+                            <div class="bg-gray-50 rounded p-3">
+                                <h4 class="font-medium mb-2">高级配置</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 自定义存储后端</li>
+                                    <li>• 事件监听配置</li>
+                                    <li>• 监控和追踪设置</li>
+                                    <li>• 日志级别控制</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <!-- 创建工作流模板模态框 -->
+    <div id="create-workflow-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-4">创建工作流模板</h3>
+                    <form id="create-workflow-form">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
+                            <input type="text" id="workflow-name" class="w-full px-3 py-2 border border-gray-300 rounded" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                            <textarea id="workflow-description" class="w-full px-3 py-2 border border-gray-300 rounded" rows="3"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">版本</label>
+                            <input type="text" id="workflow-version" class="w-full px-3 py-2 border border-gray-300 rounded" value="1.0.0">
+                        </div>
+                    </form>
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="closeCreateWorkflowModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">取消</button>
+                        <button onclick="createWorkflowTemplate()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">创建模板</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 执行工作流模态框 -->
+    <div id="execute-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-4">执行工作流</h3>
+                    <form id="execute-workflow-form">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">工作流</label>
+                            <select id="execute-workflow-id" class="w-full px-3 py-2 border border-gray-300 rounded" required>
+                                <option value="">选择工作流</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">输入数据 (JSON)</label>
+                            <textarea id="execute-input" class="w-full px-3 py-2 border border-gray-300 rounded" rows="4" 
+                                      placeholder='{"key": "value"}'>{}</textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="execute-async" class="mr-2">
+                                <span class="text-sm text-gray-700">异步执行</span>
+                            </label>
+                        </div>
+                    </form>
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="closeExecuteModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50">取消</button>
+                        <button onclick="executeWorkflow()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">执行</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情模态框 -->
+    <div id="details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="details-title" class="text-lg font-semibold">详情</h3>
+                        <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="details-content">
+                        <!-- 详情内容将通过JavaScript填充 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

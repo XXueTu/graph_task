@@ -174,6 +174,22 @@ func (s *ExecutionService) GetExecutionTrace(executionID string) (*trace.Trace, 
 	return s.tracer.GetTrace(executionID)
 }
 
+// GetExecutionTaskResults 获取执行的任务结果列表
+func (s *ExecutionService) GetExecutionTaskResults(executionID string) ([]*execution.TaskResult, error) {
+	exec, err := s.executionRepo.FindExecutionByID(executionID)
+	if err != nil {
+		return nil, err
+	}
+	
+	taskResults := exec.TaskResults()
+	var results []*execution.TaskResult
+	for _, taskResult := range taskResults {
+		results = append(results, taskResult)
+	}
+	
+	return results, nil
+}
+
 // executeWithRetry 带重试的执行
 func (s *ExecutionService) executeWithRetry(ctx context.Context, plan *execution.Plan, wf *workflow.Workflow, input map[string]interface{}) (*execution.Execution, error) {
 	var lastErr error

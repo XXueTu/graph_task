@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -10,14 +9,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/XXueTu/graph_task/domain/workflow"
 	"github.com/XXueTu/graph_task/interfaces/sdk"
-	"github.com/XXueTu/graph_task/interfaces/sdk/examples"
 )
 
 func main() {
 	var (
 		dsn      = flag.String("dsn", "root:Root@123@tcp(10.99.51.9:3306)/graph_task?charset=utf8mb4&parseTime=True&loc=Local", "MySQL DSN")
-		port     = flag.Int("port", 8080, "Web server port")
+		port     = flag.Int("port", 8088, "Web server port")
 		example  = flag.String("example", "", "Run example (quick-start, advanced, retry, monitoring)")
 		noDaemon = flag.Bool("no-daemon", false, "Don't run as daemon, exit after example")
 	)
@@ -30,7 +29,7 @@ func main() {
 		if err := runExample(*example, *dsn); err != nil {
 			log.Fatalf("运行示例失败: %v", err)
 		}
-		
+
 		if *noDaemon {
 			return
 		}
@@ -50,7 +49,7 @@ func main() {
 
 	fmt.Printf("✅ 服务器已启动\n")
 	fmt.Printf("📊 Web管理界面: %s\n", client.GetWebURL())
-	fmt.Println("📖 API文档: http://localhost:8080/api/v1/")
+	fmt.Println("📖 API文档: http://localhost:8088/api/v1/")
 	fmt.Println("🔄 按 Ctrl+C 停止服务器")
 
 	// 等待中断信号
@@ -64,13 +63,13 @@ func main() {
 func runExample(exampleName, dsn string) error {
 	switch exampleName {
 	case "quick-start":
-		return examples.QuickStartExample()
+		return sdk.QuickStartExample()
 	case "advanced":
-		return examples.AdvancedExample()
+		return sdk.AdvancedExample()
 	case "retry":
-		return examples.RetryExample()
+		return sdk.RetryExample()
 	case "monitoring":
-		return examples.MonitoringExample()
+		return sdk.MonitoringExample()
 	default:
 		return fmt.Errorf("未知示例: %s", exampleName)
 	}
@@ -96,24 +95,24 @@ func registerExampleWorkflows(client *sdk.Client) error {
 func registerDataProcessingWorkflow(client *sdk.Client) error {
 	// 使用模板创建数据处理工作流
 	template := sdk.DataProcessingTemplate()
-	
-	handlers := map[string]func(context.Context, map[string]interface{}) (map[string]interface{}, error){
-		"extract": func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+
+	handlers := map[string]workflow.TaskHandler{
+		"extract": func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			time.Sleep(100 * time.Millisecond) // 模拟处理时间
-			
+
 			source := input["source"].(string)
 			return map[string]interface{}{
-				"records": 1000,
-				"source":  source,
+				"records":      1000,
+				"source":       source,
 				"extracted_at": time.Now(),
 			}, nil
 		},
-		"validate": func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		"validate": func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			time.Sleep(50 * time.Millisecond)
-			
+
 			extractOutput := input["extract_output"].(map[string]interface{})
 			records := extractOutput["records"].(int)
-			
+
 			validRecords := int(float64(records) * 0.95) // 95% 有效
 			return map[string]interface{}{
 				"total_records":   records,
@@ -121,24 +120,24 @@ func registerDataProcessingWorkflow(client *sdk.Client) error {
 				"invalid_records": records - validRecords,
 			}, nil
 		},
-		"transform": func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		"transform": func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			time.Sleep(200 * time.Millisecond)
-			
+
 			validateOutput := input["validate_output"].(map[string]interface{})
 			validRecords := validateOutput["valid_records"].(int)
-			
+
 			return map[string]interface{}{
 				"transformed_records": validRecords,
 				"transformation_type": "normalize",
-				"transformed_at": time.Now(),
+				"transformed_at":      time.Now(),
 			}, nil
 		},
-		"load": func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		"load": func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			time.Sleep(150 * time.Millisecond)
-			
+
 			transformOutput := input["transform_output"].(map[string]interface{})
 			transformedRecords := transformOutput["transformed_records"].(int)
-			
+
 			return map[string]interface{}{
 				"loaded_records": transformedRecords,
 				"target_table":   "processed_data",
@@ -158,49 +157,49 @@ func registerDataProcessingWorkflow(client *sdk.Client) error {
 
 func registerUserRegistrationWorkflow(client *sdk.Client) error {
 	workflow := client.NewEasyWorkflow("user-registration").
-		Task("validate_email", "验证邮箱", func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		Task("validate_email", "验证邮箱", func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			email := input["email"].(string)
 			time.Sleep(50 * time.Millisecond)
-			
+
 			// 简单的邮箱验证
 			if !contains(email, "@") {
 				return nil, fmt.Errorf("无效的邮箱地址: %s", email)
 			}
-			
+
 			return map[string]interface{}{
 				"email":        email,
 				"email_valid":  true,
 				"validated_at": time.Now(),
 			}, nil
 		}).
-		Task("check_duplicate", "检查重复", func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		Task("check_duplicate", "检查重复", func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			validateOutput := input["validate_email_output"].(map[string]interface{})
 			email := validateOutput["email"].(string)
 			time.Sleep(100 * time.Millisecond)
-			
+
 			// 模拟数据库检查
 			duplicate := false
 			if email == "test@example.com" {
 				duplicate = true
 			}
-			
+
 			return map[string]interface{}{
 				"email":        email,
 				"is_duplicate": duplicate,
 				"checked_at":   time.Now(),
 			}, nil
 		}).
-		Task("create_user", "创建用户", func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		Task("create_user", "创建用户", func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			checkOutput := input["check_duplicate_output"].(map[string]interface{})
 			email := checkOutput["email"].(string)
 			isDuplicate := checkOutput["is_duplicate"].(bool)
-			
+
 			if isDuplicate {
 				return nil, fmt.Errorf("用户已存在: %s", email)
 			}
-			
+
 			time.Sleep(200 * time.Millisecond)
-			
+
 			userID := fmt.Sprintf("user_%d", time.Now().Unix())
 			return map[string]interface{}{
 				"user_id":    userID,
@@ -209,19 +208,19 @@ func registerUserRegistrationWorkflow(client *sdk.Client) error {
 				"status":     "active",
 			}, nil
 		}).
-		Task("send_welcome_email", "发送欢迎邮件", func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+		Task("send_welcome_email", "发送欢迎邮件", func(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 			createOutput := input["create_user_output"].(map[string]interface{})
 			email := createOutput["email"].(string)
 			userID := createOutput["user_id"].(string)
-			
+
 			time.Sleep(100 * time.Millisecond)
-			
+
 			return map[string]interface{}{
-				"user_id":     userID,
-				"email":       email,
-				"email_sent":  true,
-				"sent_at":     time.Now(),
-				"email_type":  "welcome",
+				"user_id":    userID,
+				"email":      email,
+				"email_sent": true,
+				"sent_at":    time.Now(),
+				"email_type": "welcome",
 			}, nil
 		}).
 		Sequential("validate_email", "check_duplicate", "create_user", "send_welcome_email")
@@ -231,10 +230,10 @@ func registerUserRegistrationWorkflow(client *sdk.Client) error {
 
 // 工具函数
 func contains(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr || 
-		(len(str) > len(substr) && (str[:len(substr)] == substr || 
-		str[len(str)-len(substr):] == substr || 
-		containsInside(str, substr))))
+	return len(str) >= len(substr) && (str == substr ||
+		(len(str) > len(substr) && (str[:len(substr)] == substr ||
+			str[len(str)-len(substr):] == substr ||
+			containsInside(str, substr))))
 }
 
 func containsInside(str, substr string) bool {

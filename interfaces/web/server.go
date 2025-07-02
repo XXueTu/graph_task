@@ -49,15 +49,11 @@ func (s *Server) Start() error {
 // setupRoutes 设置路由
 func (s *Server) setupRoutes() {
 	// 静态文件服务
-	s.mux.Handle("/", http.FileServer(http.Dir("./web/static/")))
+	s.mux.Handle("/", http.FileServer(http.Dir("./interfaces/web/static/")))
 	
 	// API路由
-	s.mux.HandleFunc("/api/v1/workflows", s.handleWorkflows)
-	s.mux.HandleFunc("/api/v1/workflows/", s.handleWorkflowByID)
 	s.mux.HandleFunc("/api/v1/executions", s.handleExecutions)
 	s.mux.HandleFunc("/api/v1/executions/", s.handleExecutionByID)
-	s.mux.HandleFunc("/api/v1/retries", s.handleRetries)
-	s.mux.HandleFunc("/api/v1/retries/", s.handleRetryByID)
 	s.mux.HandleFunc("/api/v1/health", s.handleHealth)
 }
 
@@ -77,46 +73,12 @@ func (s *Server) enableCORS(next http.Handler) http.Handler {
 	})
 }
 
-// handleWorkflows 处理工作流相关请求
-func (s *Server) handleWorkflows(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		s.listWorkflows(w, r)
-	case "POST":
-		s.createWorkflow(w, r)
-	default:
-		s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-	}
-}
-
-// handleWorkflowByID 处理特定工作流请求
-func (s *Server) handleWorkflowByID(w http.ResponseWriter, r *http.Request) {
-	workflowID := s.extractIDFromPath(r.URL.Path, "/api/v1/workflows/")
-	if workflowID == "" {
-		s.writeError(w, http.StatusBadRequest, "Invalid workflow ID")
-		return
-	}
-	
-	switch r.Method {
-	case "GET":
-		s.getWorkflow(w, r, workflowID)
-	case "PUT":
-		s.updateWorkflow(w, r, workflowID)
-	case "DELETE":
-		s.deleteWorkflow(w, r, workflowID)
-	default:
-		s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-	}
-}
 
 // handleExecutions 处理执行相关请求
 func (s *Server) handleExecutions(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
+	if r.Method == "GET" {
 		s.listExecutions(w, r)
-	case "POST":
-		s.createExecution(w, r)
-	default:
+	} else {
 		s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
@@ -136,27 +98,9 @@ func (s *Server) handleExecutionByID(w http.ResponseWriter, r *http.Request) {
 		subPath := parts[1]
 		
 		switch subPath {
-		case "cancel":
-			if r.Method == "POST" {
-				s.cancelExecution(w, r, executionID)
-			} else {
-				s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-			}
-		case "status":
+		case "task-results":
 			if r.Method == "GET" {
-				s.getExecutionStatus(w, r, executionID)
-			} else {
-				s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-			}
-		case "logs":
-			if r.Method == "GET" {
-				s.getExecutionLogs(w, r, executionID)
-			} else {
-				s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-			}
-		case "trace":
-			if r.Method == "GET" {
-				s.getExecutionTrace(w, r, executionID)
+				s.getExecutionTaskResults(w, r, executionID)
 			} else {
 				s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			}
@@ -174,41 +118,6 @@ func (s *Server) handleExecutionByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleRetries 处理重试相关请求
-func (s *Server) handleRetries(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		s.listRetries(w, r)
-	default:
-		s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-	}
-}
-
-// handleRetryByID 处理特定重试请求
-func (s *Server) handleRetryByID(w http.ResponseWriter, r *http.Request) {
-	retryID := s.extractIDFromPath(r.URL.Path, "/api/v1/retries/")
-	if retryID == "" {
-		s.writeError(w, http.StatusBadRequest, "Invalid retry ID")
-		return
-	}
-	
-	if strings.HasSuffix(retryID, "/retry") {
-		retryID = strings.TrimSuffix(retryID, "/retry")
-		if r.Method == "POST" {
-			s.manualRetry(w, r, retryID)
-		} else {
-			s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		}
-		return
-	}
-	
-	switch r.Method {
-	case "GET":
-		s.getRetry(w, r, retryID)
-	default:
-		s.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-	}
-}
 
 // handleHealth 健康检查
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

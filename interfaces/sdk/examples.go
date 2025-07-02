@@ -156,13 +156,13 @@ func AdvancedExample() error {
 		fmt.Printf("输出: %+v\n", result.Output)
 	} else {
 		fmt.Printf("执行失败，查看日志获取详细信息\n")
-		
+
 		// 获取执行日志
 		logs, err := client.GetExecutionLogs(executionID, 50, 0)
 		if err == nil {
 			fmt.Println("最近的日志:")
 			for _, logEntry := range logs {
-				fmt.Printf("[%s] %s: %s\n", 
+				fmt.Printf("[%s] %s: %s\n",
 					logEntry.Level, logEntry.Timestamp.Format(time.RFC3339), logEntry.Message)
 			}
 		}
@@ -223,7 +223,7 @@ func RetryExample() error {
 	for _, failed := range failedExecutions {
 		if failed.WorkflowID == "flaky-workflow" {
 			fmt.Printf("手动重试执行: %s\n", failed.ExecutionID)
-			
+
 			retryResult, err := client.ManualRetry(context.Background(), failed.ExecutionID)
 			if err != nil {
 				fmt.Printf("重试失败: %v\n", err)
@@ -268,7 +268,7 @@ func MonitoringExample() error {
 
 	fmt.Printf("\n最近 %d 次执行:\n", len(executions))
 	for _, exec := range executions {
-		fmt.Printf("  - %s: %s (%v)\n", 
+		fmt.Printf("  - %s: %s (%v)\n",
 			exec.ID[:8], exec.Status, exec.Duration)
 	}
 
@@ -293,9 +293,9 @@ func MonitoringExample() error {
 func helloTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	name := input["name"].(string)
 	message := fmt.Sprintf("你好, %s!", name)
-	
+
 	return map[string]interface{}{
-		"greeting": message,
+		"greeting":  message,
 		"timestamp": time.Now(),
 	}, nil
 }
@@ -304,7 +304,7 @@ func processTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) 
 	// 获取上一个任务的输出
 	helloOutput := input["hello_output"].(map[string]interface{})
 	greeting := helloOutput["greeting"].(string)
-	
+
 	// 处理数据
 	data := input["data"].([]interface{})
 	var sum int
@@ -315,20 +315,20 @@ func processTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) 
 			sum += int(floatVal)
 		}
 	}
-	
+
 	return map[string]interface{}{
 		"greeting": greeting,
-		"sum": sum,
-		"count": len(data),
+		"sum":      sum,
+		"count":    len(data),
 	}, nil
 }
 
 func goodbyeTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	processOutput := input["process_output"].(map[string]interface{})
-	
+
 	return map[string]interface{}{
-		"message": "再见!",
-		"summary": fmt.Sprintf("处理完成，总和: %v", processOutput["sum"]),
+		"message":      "再见!",
+		"summary":      fmt.Sprintf("处理完成，总和: %v", processOutput["sum"]),
 		"completed_at": time.Now(),
 	}, nil
 }
@@ -338,14 +338,14 @@ func goodbyeTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) 
 func fetchDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	source := input["source"].(string)
 	table := input["table"].(string)
-	
+
 	// 模拟数据获取
 	time.Sleep(100 * time.Millisecond)
-	
+
 	return map[string]interface{}{
-		"records": 1000,
-		"source": source,
-		"table": table,
+		"records":    1000,
+		"source":     source,
+		"table":      table,
 		"fetched_at": time.Now(),
 	}, nil
 }
@@ -353,16 +353,16 @@ func fetchDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (m
 func validateDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	fetchOutput := input["fetch_data_output"].(map[string]interface{})
 	records := fetchOutput["records"].(int)
-	
+
 	// 模拟数据验证
 	time.Sleep(50 * time.Millisecond)
-	
+
 	validRecords := int(float64(records) * 0.95) // 95% 有效
-	
+
 	return map[string]interface{}{
-		"total_records": records,
-		"valid_records": validRecords,
-		"invalid_records": records - validRecords,
+		"total_records":     records,
+		"valid_records":     validRecords,
+		"invalid_records":   records - validRecords,
 		"validation_passed": true,
 	}, nil
 }
@@ -370,12 +370,12 @@ func validateDataHandler(ctx workflow.ExecContext, input map[string]interface{})
 func cleanDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	validateOutput := input["validate_data_output"].(map[string]interface{})
 	validRecords := validateOutput["valid_records"].(int)
-	
+
 	// 模拟数据清洗
 	time.Sleep(200 * time.Millisecond)
-	
+
 	cleanedRecords := int(float64(validRecords) * 0.98) // 98% 清洗后保留
-	
+
 	return map[string]interface{}{
 		"cleaned_records": cleanedRecords,
 		"removed_records": validRecords - cleanedRecords,
@@ -385,10 +385,10 @@ func cleanDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (m
 func transformDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	cleanOutput := input["clean_data_output"].(map[string]interface{})
 	cleanedRecords := cleanOutput["cleaned_records"].(int)
-	
+
 	// 模拟数据转换
 	time.Sleep(300 * time.Millisecond)
-	
+
 	return map[string]interface{}{
 		"transformed_records": cleanedRecords,
 		"transformation_type": "normalize",
@@ -398,41 +398,41 @@ func transformDataHandler(ctx workflow.ExecContext, input map[string]interface{}
 func aggregateDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	cleanOutput := input["clean_data_output"].(map[string]interface{})
 	cleanedRecords := cleanOutput["cleaned_records"].(int)
-	
+
 	// 模拟数据聚合
 	time.Sleep(150 * time.Millisecond)
-	
+
 	return map[string]interface{}{
 		"aggregated_groups": 50,
-		"base_records": cleanedRecords,
-		"aggregation_type": "daily_summary",
+		"base_records":      cleanedRecords,
+		"aggregation_type":  "daily_summary",
 	}, nil
 }
 
 func saveDataHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	transformOutput := input["transform_data_output"].(map[string]interface{})
 	aggregateOutput := input["aggregate_data_output"].(map[string]interface{})
-	
+
 	// 模拟数据保存
 	time.Sleep(100 * time.Millisecond)
-	
+
 	return map[string]interface{}{
-		"saved_records": transformOutput["transformed_records"],
+		"saved_records":    transformOutput["transformed_records"],
 		"saved_aggregates": aggregateOutput["aggregated_groups"],
-		"save_path": "/data/processed/",
-		"saved_at": time.Now(),
+		"save_path":        "/data/processed/",
+		"saved_at":         time.Now(),
 	}, nil
 }
 
 func createReportHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	saveOutput := input["save_data_output"].(map[string]interface{})
-	
+
 	// 模拟报告生成
 	time.Sleep(80 * time.Millisecond)
-	
+
 	return map[string]interface{}{
-		"report_generated": true,
-		"report_path": "/reports/daily_summary.pdf",
+		"report_generated":  true,
+		"report_path":       "/reports/daily_summary.pdf",
 		"processed_records": saveOutput["saved_records"],
 		"report_created_at": time.Now(),
 	}, nil
@@ -440,26 +440,26 @@ func createReportHandler(ctx workflow.ExecContext, input map[string]interface{})
 
 func flakyTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	failureRate := input["failure_rate"].(float64)
-	
+
 	// 模拟不稳定的任务
 	time.Sleep(100 * time.Millisecond)
-	
+
 	if time.Now().UnixNano()%100 < int64(failureRate*100) {
 		return nil, fmt.Errorf("任务随机失败 (失败率: %.0f%%)", failureRate*100)
 	}
-	
+
 	return map[string]interface{}{
-		"result": "success",
+		"result":   "success",
 		"attempts": 1,
 	}, nil
 }
 
 func finalTaskHandler(ctx workflow.ExecContext, input map[string]interface{}) (map[string]interface{}, error) {
 	flakyOutput := input["flaky_task_output"].(map[string]interface{})
-	
+
 	return map[string]interface{}{
-		"final_result": "completed",
+		"final_result":    "completed",
 		"previous_result": flakyOutput["result"],
-		"completed_at": time.Now(),
+		"completed_at":    time.Now(),
 	}, nil
 }

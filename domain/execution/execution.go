@@ -61,6 +61,7 @@ func NewTaskResult(taskID string) *TaskResult {
 }
 
 // TaskResult getter methods
+func (tr *TaskResult) ID() string                     { return tr.taskID } // Use taskID as ID for now
 func (tr *TaskResult) TaskID() string                 { return tr.taskID }
 func (tr *TaskResult) Status() workflow.TaskStatus    { return tr.status }
 func (tr *TaskResult) Input() map[string]interface{}  { return tr.input }
